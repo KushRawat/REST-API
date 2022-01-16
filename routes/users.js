@@ -43,13 +43,55 @@ router.delete("/:id", async (req, res) => {
 router.get("/:id", async (req, res) => {
     try {
         const user = await User.findById(req.params.id);
-        const {password, updatedAt, ...others} = user._doc
-        res.status(200).json(others)
+        const { password, updatedAt, ...others } = user._doc;
+        res.status(200).json(others);
     } catch (err) {
         res.status(500).json(err);
     }
 });
 // follow a user
+router.put("/:id/follow", async (req, res) => {
+    if (req.body.userId !== req.params.id) {
+        try {
+            const user = await User.findById(req.params.id);
+            const currUser = await User.findById(req.body.userId);
+            if (!user.followers.includes(req.body.userId)) {
+                await user.updateOne({ $push: { followers: req.body.userId } });
+                await currUser.updateOne({
+                    $push: { following: req.params.id },
+                });
+                res.status(200).json("user has been followed");
+            } else {
+                res.status(403).json("You already follow this user");
+            }
+        } catch (err) {
+            res.status(500).json(err);
+        }
+    } else {
+        res.status(403).json("You can't follow yourself");
+    }
+});
 // unfollow a user
+router.put("/:id/unfollow", async (req, res) => {
+    if (req.body.userId !== req.params.id) {
+        try {
+            const user = await User.findById(req.params.id);
+            const currUser = await User.findById(req.body.userId);
+            if (user.followers.includes(req.body.userId)) {
+                await user.updateOne({ $pull: { followers: req.body.userId } });
+                await currUser.updateOne({
+                    $pull: { following: req.params.id },
+                });
+                res.status(200).json("user has been unfollowed");
+            } else {
+                res.status(403).json("You don't follow this user");
+            }
+        } catch (err) {
+            res.status(500).json(err);
+        }
+    } else {
+        res.status(403).json("You can't unfollow yourself");
+    }
+});
 
 module.exports = router;
